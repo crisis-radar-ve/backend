@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -28,7 +30,7 @@ def list_incidents(
 
 
 @router.get("/{incident_id}", response_model=IncidentOut)
-def get_incident(incident_id: str, db: Session = Depends(get_db)):
+def get_incident(incident_id: UUID, db: Session = Depends(get_db)):
     incident = db.query(Incident).filter(Incident.id == incident_id).first()
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
@@ -46,9 +48,9 @@ def create_incident(payload: IncidentCreate, db: Session = Depends(get_db)):
 
 @router.post("/{incident_id}/merge/{target_incident_id}")
 def merge_incidents(
-    incident_id: str,
-    target_incident_id: str,
-    reviewer_id: str | None = None,
+    incident_id: UUID,
+    target_incident_id: UUID,
+    reviewer_id: UUID | None = None,
     db: Session = Depends(get_db),
 ):
     source = db.query(Incident).filter(Incident.id == incident_id).first()
@@ -56,10 +58,7 @@ def merge_incidents(
     if not source or not target:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    # Re-link reports
-    links = db.query(IncidentReport).filter(
-        IncidentReport.incident_id == source.id
-    ).all()
+    links = db.query(IncidentReport).filter(IncidentReport.incident_id == source.id).all()
     for link in links:
         link.incident_id = target.id
 

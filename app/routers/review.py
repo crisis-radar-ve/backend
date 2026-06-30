@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -25,7 +26,6 @@ def review_report(
 
     if payload.action == "approve":
         report.review_status = "approved"
-        # Auto-create incident if none linked (simplified).
         if not report.incident_links:
             incident = Incident(
                 title=report.summary[:120] if report.summary else "Untitled",
@@ -67,7 +67,6 @@ def review_report(
         raise HTTPException(status_code=400, detail="Unknown action")
 
     report.reviewer_id = reviewer_id
-    from datetime import datetime
     report.reviewed_at = datetime.utcnow()
 
     action = ReviewAction(

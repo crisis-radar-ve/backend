@@ -1,4 +1,4 @@
-from typing import Any
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -27,7 +27,7 @@ def list_reports(
 
 
 @router.get("/{report_id}", response_model=ReportOut)
-def get_report(report_id: str, db: Session = Depends(get_db)):
+def get_report(report_id: UUID, db: Session = Depends(get_db)):
     report = db.query(Report).filter(Report.id == report_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
