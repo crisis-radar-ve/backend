@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import engine, Base
-from app.routers import submit, reports, incidents, review, auth
+from app.routers import submit, reports, incidents, review, auth, collector
 from app.services.media import UPLOAD_DIR
 
 # Create tables on startup (replace with Alembic in production).
@@ -29,6 +29,7 @@ app.include_router(submit.router)
 app.include_router(reports.router)
 app.include_router(incidents.router)
 app.include_router(review.router)
+app.include_router(collector.router)
 
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
