@@ -219,6 +219,29 @@ reason                  TEXT
 created_at              TIMESTAMPTZ
 ```
 
+### media
+
+Stores images and screenshots attached to raw items or reports. Designed for cost optimization.
+
+```text
+id                      UUID PK
+raw_item_id             UUID FK
+report_id               UUID FK
+
+file_path               TEXT        -- storage key / local path
+original_url            TEXT        -- original upload (reviewer-only / temporary)
+compressed_url          TEXT        -- web-optimized public image
+thumbnail_url           TEXT        -- small preview
+
+mime_type               TEXT
+size_bytes              INT
+width                   INT
+height                  INT
+
+processing_status       TEXT        -- pending | compressed | failed
+created_at              TIMESTAMPTZ
+```
+
 ---
 
 ## Categories
@@ -344,6 +367,18 @@ Dashboard disclaimers:
 
 ---
 
+## Shareability / Social Cards
+
+Every approved public incident can be shared easily to Instagram, X, and WhatsApp.
+
+- **Generate a share card** (PNG) with the incident summary, category, location, urgency, and confidence.
+- **Download image** for Instagram / WhatsApp Status.
+- **Share to X** via Twitter Web Intent with pre-filled text and link.
+- The card always includes the disclaimer and source link.
+- For sensitive incidents (`MISSING_PERSON`, `POSSIBLE_LOCATED`), allow sharing only the public summary and source link, never contact details or exact addresses.
+
+---
+
 ## Data Sources
 
 ### Phase 1 — Manual input
@@ -420,6 +455,36 @@ POST /reports/{report_id}/request-removal
 - AI-generated situation reports every hour
 - Automatic multilingual translation
 - Notification subscriptions by region
+
+---
+
+## Cost Optimization Strategy
+
+Because infrastructure costs come from personal funds, every expensive component is optimized from day one.
+
+### Images / multimedia
+
+- **Client-side compression** before upload (canvas or browser-image-compression).
+- **Limit upload size** to 10 MB per file and max 4 images per submission initially.
+- **Generate three versions:** original (reviewer-only), compressed (public), thumbnail (lists).
+- **Preferred object storage:** Cloudflare R2 or Backblaze B2 (lower egress than AWS S3).
+- **Delete originals** after successful OCR + thumbnail generation if they are not legally required.
+- **Serve via CDN** with long cache headers.
+- **Lazy load** images on the dashboard.
+
+### AI / LLM
+
+- Use smaller models (GPT-4o-mini, Claude Haiku, or local models) for extraction and categorization.
+- Cache embeddings to avoid recomputing.
+- Batch OCR and extraction jobs with Celery during low-traffic windows.
+- Skip AI processing for exact duplicates detected by hash.
+
+### Database
+
+- Index `reports(raw_item_id, review_status, category)`.
+- Index `incidents(category, status, last_seen)`.
+- Use `pgvector` HNSW index for embedding search.
+- Archive old `raw_items` and rejected reports after 90 days.
 
 ---
 

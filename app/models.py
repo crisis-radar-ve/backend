@@ -39,6 +39,7 @@ class RawItem(Base):
     processing_status = Column(String, default="pending")  # pending | processing | completed | failed
 
     reports = relationship("Report", back_populates="raw_item")
+    media = relationship("Media", back_populates="raw_item")
 
 
 class Report(Base):
@@ -90,6 +91,7 @@ class Report(Base):
 
     raw_item = relationship("RawItem", back_populates="reports")
     incident_links = relationship("IncidentReport", back_populates="report")
+    media = relationship("Media", back_populates="report")
 
 
 class Incident(Base):
@@ -145,6 +147,30 @@ class ReviewAction(Base):
     new_status = Column(String)
     comment = Column(Text)
     created_at = Column(DateTime, default=now_utc)
+
+
+class Media(Base):
+    __tablename__ = "media"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    raw_item_id = Column(UUID(as_uuid=True), ForeignKey("raw_items.id"), nullable=False)
+    report_id = Column(UUID(as_uuid=True), ForeignKey("reports.id"), nullable=True)
+
+    file_path = Column(Text)  # storage key / local path
+    original_url = Column(Text)
+    compressed_url = Column(Text)
+    thumbnail_url = Column(Text)
+
+    mime_type = Column(String)
+    size_bytes = Column(Integer)
+    width = Column(Integer)
+    height = Column(Integer)
+
+    processing_status = Column(String, default="pending")  # pending | compressed | failed
+    created_at = Column(DateTime, default=now_utc)
+
+    raw_item = relationship("RawItem", back_populates="media")
+    report = relationship("Report", back_populates="media")
 
 
 class IncidentMergeHistory(Base):

@@ -49,6 +49,20 @@ class ContactInfo(BaseModel):
     other: str | None = None
 
 
+class MediaOut(BaseModel):
+    id: UUID
+    original_url: str | None
+    compressed_url: str | None
+    thumbnail_url: str | None
+    mime_type: str | None
+    width: int | None
+    height: int | None
+    processing_status: str
+
+    class Config:
+        from_attributes = True
+
+
 class ReportBase(BaseModel):
     category: str
     summary: str | None = None
@@ -84,6 +98,7 @@ class ReportOut(ReportBase):
     people: list[Person]
     organizations: list[str]
     contact_info: dict[str, Any]
+    media: list[MediaOut]
     review_status: str
     reviewer_id: UUID | None
     reviewed_at: datetime | None
@@ -120,6 +135,7 @@ class IncidentOut(IncidentBase):
     last_seen: datetime
     created_at: datetime
     updated_at: datetime
+    media: list[MediaOut]
 
     class Config:
         from_attributes = True
