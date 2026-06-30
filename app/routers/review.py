@@ -33,9 +33,10 @@ def review_report(
                 location=report.location_text,
                 summary=report.summary,
                 public_summary=report.public_summary,
-                visibility=report.public_visibility,
+                visibility="public" if report.public_visibility == "public" else "reviewer_only",
                 confidence=report.confidence,
                 source_urls=[report.source_url] if report.source_url else [],
+                report_count=1,
             )
             db.add(incident)
             db.flush()

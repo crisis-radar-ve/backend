@@ -135,7 +135,7 @@ class IncidentOut(IncidentBase):
     last_seen: datetime
     created_at: datetime
     updated_at: datetime
-    media: list[MediaOut]
+    media: list[MediaOut] = []
 
     class Config:
         from_attributes = True

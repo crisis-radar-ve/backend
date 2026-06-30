@@ -1,13 +1,15 @@
 import hashlib
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
 from sqlalchemy.orm import Session
 
 from app.ai.extraction import extract_report
 from app.database import get_db
-from app.models import RawItem, Report
+from app.models import RawItem, Report, Media
 from app.schemas import SubmitLinkPayload, SubmitTextPayload, SubmitOut
+from app.services.fetcher import fetch_url
+from app.services.media import save_upload
 
 router = APIRouter(prefix="/submit", tags=["submit"])
 
@@ -42,31 +44,43 @@ def _create_report(db: Session, raw_item: RawItem) -> Report:
         review_status="pending",
     )
     db.add(report)
+    db.flush()
+
+    # Link any media attached to the raw item to the report.
+    for media in raw_item.media:
+        media.report_id = report.id
+
     db.commit()
     db.refresh(report)
     return report
 
 
 @router.post("/link", response_model=SubmitOut)
-def submit_link(
+async def submit_link(
     payload: SubmitLinkPayload,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
+    fetched = await fetch_url(payload.url)
+    raw_text = payload.raw_text or fetched["text"] or payload.url
+
     raw_item = RawItem(
         id=uuid4(),
         source_type="link",
         source_url=payload.url,
-        source_metadata=payload.source_metadata,
-        raw_text=payload.raw_text or payload.url,
-        fingerprint=_compute_fingerprint(payload.raw_text, payload.url),
+        source_metadata={
+            **payload.source_metadata,
+            "fetched_title": fetched.get("title"),
+            "fetch_error": fetched.get("error"),
+        },
+        raw_text=raw_text,
+        fingerprint=_compute_fingerprint(raw_text, payload.url),
         processing_status="pending",
     )
     db.add(raw_item)
     db.commit()
     db.refresh(raw_item)
 
-    # For MVP, process synchronously. Move to Celery for production.
     _create_report(db, raw_item)
 
     return SubmitOut(raw_item_id=raw_item.id, status="completed")
@@ -95,4 +109,35 @@ def submit_text(
     return SubmitOut(raw_item_id=raw_item.id, status="completed")
 
 
-# Screenshot upload will go here using FileUpload.
+@router.post("/screenshot", response_model=SubmitOut)
+async def submit_screenshot(
+    file: UploadFile = File(...),
+    caption: str | None = None,
+    db: Session = Depends(get_db),
+):
+    saved = await save_upload(file)
+
+    raw_item = RawItem(
+        id=uuid4(),
+        source_type="screenshot",
+        source_metadata={"caption": caption, "filename": file.filename},
+        raw_text=caption or "",
+        image_path=saved["file_path"],
+        fingerprint=_compute_fingerprint(caption or "", saved["file_path"]),
+        processing_status="pending",
+    )
+    db.add(raw_item)
+    db.commit()
+    db.refresh(raw_item)
+
+    media = Media(
+        id=uuid4(),
+        raw_item_id=raw_item.id,
+        **saved,
+        processing_status="compressed",
+    )
+    db.add(media)
+
+    _create_report(db, raw_item)
+
+    return SubmitOut(raw_item_id=raw_item.id, status="completed")

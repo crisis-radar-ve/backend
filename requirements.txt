@@ -12,3 +12,4 @@ celery==5.4.0
 redis==5.0.7
 openai==1.35.3
 python-dotenv==1.0.1
+Pillow==10.3.0

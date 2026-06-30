@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import engine, Base
 from app.routers import submit, reports, incidents, review
+from app.services.media import UPLOAD_DIR
 
 # Create tables on startup (replace with Alembic in production).
 Base.metadata.create_all(bind=engine)
@@ -26,6 +28,8 @@ app.include_router(submit.router)
 app.include_router(reports.router)
 app.include_router(incidents.router)
 app.include_router(review.router)
+
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
 @app.get("/health")
