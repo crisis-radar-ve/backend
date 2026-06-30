@@ -149,6 +149,19 @@ class ReviewAction(Base):
     created_at = Column(DateTime, default=now_utc)
 
 
+class Reviewer(Base):
+    __tablename__ = "reviewers"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False)
+    email = Column(String, nullable=False, unique=True)
+    role = Column(String, default="reviewer")  # reviewer | admin
+    organization = Column(Text)
+    password_hash = Column(Text)
+    active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=now_utc)
+
+
 class Media(Base):
     __tablename__ = "media"
 

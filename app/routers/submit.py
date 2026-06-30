@@ -111,32 +111,34 @@ def submit_text(
 
 @router.post("/screenshot", response_model=SubmitOut)
 async def submit_screenshot(
-    file: UploadFile = File(...),
+    files: list[UploadFile] = File(...),
     caption: str | None = None,
     db: Session = Depends(get_db),
 ):
-    saved = await save_upload(file)
-
     raw_item = RawItem(
         id=uuid4(),
         source_type="screenshot",
-        source_metadata={"caption": caption, "filename": file.filename},
+        source_metadata={"caption": caption, "filename": files[0].filename if files else None},
         raw_text=caption or "",
-        image_path=saved["file_path"],
-        fingerprint=_compute_fingerprint(caption or "", saved["file_path"]),
+        image_path="",
+        fingerprint=_compute_fingerprint(caption or "", ""),
         processing_status="pending",
     )
     db.add(raw_item)
+    db.flush()
+
+    for file in files:
+        saved = await save_upload(file)
+        media = Media(
+            id=uuid4(),
+            raw_item_id=raw_item.id,
+            **saved,
+            processing_status="compressed",
+        )
+        db.add(media)
+
     db.commit()
     db.refresh(raw_item)
-
-    media = Media(
-        id=uuid4(),
-        raw_item_id=raw_item.id,
-        **saved,
-        processing_status="compressed",
-    )
-    db.add(media)
 
     _create_report(db, raw_item)
 

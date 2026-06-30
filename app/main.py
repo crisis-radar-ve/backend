@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import engine, Base
-from app.routers import submit, reports, incidents, review
+from app.routers import submit, reports, incidents, review, auth
 from app.services.media import UPLOAD_DIR
 
 # Create tables on startup (replace with Alembic in production).
@@ -24,6 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(submit.router)
 app.include_router(reports.router)
 app.include_router(incidents.router)
